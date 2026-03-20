@@ -1,0 +1,23 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "${DB_PORT}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./internal/db/migrations/001_initial.sql:/docker-entrypoint-initdb.d/001_initial.sql
+
+  api:
+    build: .
+    ports:
+      - "${PORT}:${PORT}"
+    env_file: .env
+    depends_on:
+      - db
+
+volumes:
+  pgdata:
