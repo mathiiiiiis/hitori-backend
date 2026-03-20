@@ -1,4 +1,15 @@
 services:
+  api:
+    build: .
+    ports:
+      - "${PORT}:${PORT}"
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}?sslmode=disable
+    depends_on:
+      db:
+        condition: service_healthy
+
   db:
     image: postgres:16-alpine
     environment:
@@ -10,14 +21,11 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./internal/db/migrations/001_initial.sql:/docker-entrypoint-initdb.d/001_initial.sql
-
-  api:
-    build: .
-    ports:
-      - "${PORT}:${PORT}"
-    env_file: .env
-    depends_on:
-      - db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      interval: 2s
+      timeout: 5s
+      retries: 5
 
 volumes:
   pgdata:
