@@ -21,8 +21,9 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./internal/db/migrations/001_initial.sql:/docker-entrypoint-initdb.d/001_initial.sql
+      - ./internal/db/migrations/002_events_cli.sql:/docker-entrypoint-initdb.d/002_events_cli.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      test: ["CMD-SHELL", "pg_isready -U $POSTGRES_USER -d $POSTGRES_DB"]
       interval: 2s
       timeout: 5s
       retries: 5

@@ -29,16 +29,15 @@ func randomState() string {
 	return hex.EncodeToString(b)
 }
 
-/// GET /auth/google
+// / GET /auth/google
 func GoogleLogin(w http.ResponseWriter, r *http.Request) {
 	state := randomState()
 	// TODO: store state in a short lived cookie for CSRF validation
 	http.Redirect(w, r, auth.GoogleConfig.AuthCodeURL(state), http.StatusTemporaryRedirect)
 }
 
-/// GET /auth/google/callback
+// / GET /auth/google/callback
 func GoogleCallback(w http.ResponseWriter, r *http.Request) {
-	// TODO: validate state param against cookie
 	code := r.URL.Query().Get("code")
 	if code == "" {
 		http.Error(w, "missing code", http.StatusBadRequest)
@@ -83,17 +82,28 @@ func GoogleCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//redirect to frontend with token as fragment (never hits server)
+	// CLI flow: state is "cli:<session_id>"
+	if state := r.URL.Query().Get("state"); len(state) > 4 && state[:4] == "cli:" {
+		sessionID := state[4:]
+		if err := db.CompleteCLISession(r.Context(), sessionID, jwt); err != nil {
+			log.Printf("complete cli session error: %v", err)
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		fmt.Fprint(w, cliSuccessPage)
+		return
+	}
+
+	//redirect to frontend with token as fragment
 	http.Redirect(w, r, fmt.Sprintf("%s/auth/callback#token=%s", frontendURL, jwt), http.StatusTemporaryRedirect)
 }
 
-/// GET /auth/discord
+// GET /auth/discord
 func DiscordLogin(w http.ResponseWriter, r *http.Request) {
 	state := randomState()
 	http.Redirect(w, r, auth.DiscordConfig.AuthCodeURL(state), http.StatusTemporaryRedirect)
 }
 
-/// GET /auth/discord/callback
+// GET /auth/discord/callback
 func DiscordCallback(w http.ResponseWriter, r *http.Request) {
 	code := r.URL.Query().Get("code")
 	if code == "" {
@@ -143,6 +153,17 @@ func DiscordCallback(w http.ResponseWriter, r *http.Request) {
 	jwt, err := auth.IssueToken(userID)
 	if err != nil {
 		http.Error(w, "token error", http.StatusInternalServerError)
+		return
+	}
+
+	// CLI flow: state is "cli:<session_id>"
+	if state := r.URL.Query().Get("state"); len(state) > 4 && state[:4] == "cli:" {
+		sessionID := state[4:]
+		if err := db.CompleteCLISession(r.Context(), sessionID, jwt); err != nil {
+			log.Printf("complete cli session error: %v", err)
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		fmt.Fprint(w, cliSuccessPage)
 		return
 	}
 
