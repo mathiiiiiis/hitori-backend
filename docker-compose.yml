@@ -5,9 +5,9 @@ services:
       - "${PORT}:${PORT}"
     environment:
       DATABASE_URL: postgres://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}?sslmode=disable
-    depends_on:
-      db:
-        condition: service_healthy
+    #depends_on:
+    #  db:
+    #    condition: service_healthy
 
   db:
     image: postgres:16-alpine
